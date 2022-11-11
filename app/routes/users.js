@@ -9,12 +9,26 @@ const saltRounds = 10;
 router.post("/", async (req, res) => {
   try {
     const { username, password } = req.body;
+
+    if (username.length < 4) {
+      return res.status(400).json({
+        message: "Username must have atleast 4 symbols.",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: "Password must have atleast 8 symbols.",
+      });
+    }
+
     const user = await User.find({ username: username });
 
-    if (user.length)
-      return res.json({
+    if (user.length) {
+      return res.status(409).json({
         message: `User with username '${username}' is already exist.`,
       });
+    }
 
     const hash = await bcrypt.hash(password, saltRounds);
 
