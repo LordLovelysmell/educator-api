@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { json } = require("body-parser");
 const router = express.Router();
 const saltRounds = 10;
 
@@ -22,7 +23,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const user = await User.find({ username: username });
+    const user = await User.find({ username });
 
     if (user.length) {
       return res.status(409).json({
@@ -77,6 +78,48 @@ router.get("/validateToken", async (req, res) => {
       message: error,
     });
   }
+});
+
+router.post("/sign-in", async (req, res) => {
+  const { username, password } = req.body;
+
+  if (username.length < 4) {
+    return res.status(400).json({
+      message: "Username must have atleast 4 symbols.",
+    });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({
+      message: "Password must have atleast 8 symbols.",
+    });
+  }
+
+  const user = await User.findOne({ username });
+
+  if (!user) {
+    return res.status(400).json({
+      message: "The username or password is incorrect.",
+    });
+  }
+
+  bcrypt.compare(password, user.password, (err, result) => {
+    if (!result) {
+      return res.status(400).json({
+        message: "The username or password is incorrect.",
+      });
+    }
+
+    const token = jwt.sign(
+      JSON.stringify({ ...user, date: Date.now() }),
+      process.env.JWT_SECRET_KEY
+    );
+
+    return res.json({
+      token,
+      message: "You have successfully signed in.",
+    });
+  });
 });
 
 module.exports = router;
